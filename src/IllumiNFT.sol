@@ -75,6 +75,46 @@ contract ERC721 {
         admin = administrator;
     }
 
+
+    /*//////////////////////////////////////////////////////////////
+                              CUSTOM LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function tokenURI(uint256 id) public view returns (string memory){
+        require(_ownerOf[id] != address(0), "URI Does not exist");
+
+        if (redeemed[id] == true) {
+        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        }
+        else {
+        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        }
+    }
+
+    function redeem(uint256 id) public returns (uint256 amount) {
+        address owner = _ownerOf[id];
+        require(owner != address(0), "URI Does not exist");
+
+        require(redeemed[id] == false, "Already redeemed");
+
+        redeemed[id] = true;
+
+        emit Redeemed(owner, id);
+
+        return IERC5095(principalToken).redeem(principalAmount, address(this), owner);
+    }
+
+    function mint(address[] memory owners) public onlyAdmin {
+        for (uint256 i; i != owners.length;) {
+            _mint(owners[i], (totalSupply + 1));
+            unchecked {
+                ++i;
+            }
+            totalSupply = totalSupply + 1;
+        }
+        IERC20(principalToken).transferFrom(msg.sender, address(this), (principalAmount * owners.length));
+    }
+
     /*//////////////////////////////////////////////////////////////
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -155,45 +195,6 @@ contract ERC721 {
                     ERC721TokenReceiver.onERC721Received.selector,
                 "UNSAFE_RECIPIENT"
             );
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              CUSTOM LOGIC
-    //////////////////////////////////////////////////////////////*/
-
- function tokenURI(uint256 id) public view returns (string memory){
-        require(_ownerOf[id] != address(0), "URI Does not exist");
-
-        if (redeemed[id] == true) {
-        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
-        }
-        else {
-        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
-        }
-    }
-
-    function redeem(uint256 id) public returns (uint256 amount) {
-        address owner = _ownerOf[id];
-        require(owner != address(0), "URI Does not exist");
-
-        require(redeemed[id] == false, "Already redeemed");
-
-        redeemed[id] = true;
-
-        emit Redeemed(owner, id);
-
-        return IERC5095(principalToken).redeem(principalAmount, address(this), owner);
-    }
-
-    function mint(address[] memory owners) public onlyAdmin {
-        for (uint256 i; i != owners.length;) {
-            _mint(owners[i], (totalSupply + 1));
-            unchecked {
-                ++i;
-            }
-            totalSupply = totalSupply + 1;
-        }
-        IERC20(principalToken).transferFrom(msg.sender, address(this), (principalAmount * owners.length));
     }
 
     /*//////////////////////////////////////////////////////////////
