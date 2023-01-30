@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import "../../Interfaces/IERC5095.sol";
+
+
 /// @notice Modern, minimalist, and gas efficient ERC-721 implementation.
 /// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/tokens/ERC721.sol)
-abstract contract ERC721 {
+contract ERC721 {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -14,6 +17,8 @@ abstract contract ERC721 {
 
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
+    event Redeemed(address indexed owner, uint256 indexed id);
+
     /*//////////////////////////////////////////////////////////////
                          METADATA STORAGE/LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -22,21 +27,25 @@ abstract contract ERC721 {
 
     string public symbol;
 
-    function tokenURI(uint256 id) public view virtual returns (string memory);
+    address public immutable principalToken;
+
+    uint256 public immutable principalAmount;
 
     /*//////////////////////////////////////////////////////////////
-                      ERC721 BALANCE/OWNER STORAGE
+                      ERC721 STORAGE
     //////////////////////////////////////////////////////////////*/
 
     mapping(uint256 => address) internal _ownerOf;
 
     mapping(address => uint256) internal _balanceOf;
 
-    function ownerOf(uint256 id) public view virtual returns (address owner) {
+    mapping(uint256 => bool) public redeemed;
+
+    function ownerOf(uint256 id) public view returns (address owner) {
         require((owner = _ownerOf[id]) != address(0), "NOT_MINTED");
     }
 
-    function balanceOf(address owner) public view virtual returns (uint256) {
+    function balanceOf(address owner) public view returns (uint256) {
         require(owner != address(0), "ZERO_ADDRESS");
 
         return _balanceOf[owner];
@@ -54,16 +63,18 @@ abstract contract ERC721 {
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(string memory _name, string memory _symbol) {
+    constructor(string memory _name, string memory _symbol, address principal, uint256 amount) {
         name = _name;
         symbol = _symbol;
+        principalToken = principal;
+        principalAmount = amount;
     }
 
     /*//////////////////////////////////////////////////////////////
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function approve(address spender, uint256 id) public virtual {
+    function approve(address spender, uint256 id) public {
         address owner = _ownerOf[id];
 
         require(msg.sender == owner || isApprovedForAll[owner][msg.sender], "NOT_AUTHORIZED");
@@ -73,7 +84,7 @@ abstract contract ERC721 {
         emit Approval(owner, spender, id);
     }
 
-    function setApprovalForAll(address operator, bool approved) public virtual {
+    function setApprovalForAll(address operator, bool approved) public {
         isApprovedForAll[msg.sender][operator] = approved;
 
         emit ApprovalForAll(msg.sender, operator, approved);
@@ -83,8 +94,10 @@ abstract contract ERC721 {
         address from,
         address to,
         uint256 id
-    ) public virtual {
+    ) public {
         require(from == _ownerOf[id], "WRONG_FROM");
+
+        require(redeemed[id] == false, "Cannot transfer after redeeming.");
 
         require(to != address(0), "INVALID_RECIPIENT");
 
@@ -112,7 +125,7 @@ abstract contract ERC721 {
         address from,
         address to,
         uint256 id
-    ) public virtual {
+    ) public {
         transferFrom(from, to, id);
 
         if (to.code.length != 0)
@@ -140,10 +153,38 @@ abstract contract ERC721 {
     }
 
     /*//////////////////////////////////////////////////////////////
+                              CUSTOM LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+ function tokenURI(uint256 id) public view returns (string memory){
+        require(_ownerOf[id] != address(0), "URI Does not exist");
+
+        if (redeemed[id] == true) {
+        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        }
+        else {
+        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        }
+    }
+
+    function redeem(uint256 id) public returns (uint256 amount) {
+        address owner = _ownerOf[id];
+        require(owner != address(0), "URI Does not exist");
+
+        require(redeemed[id] == false, "Already redeemed");
+
+        redeemed[id] = true;
+
+        emit Redeemed(owner, id);
+
+        return IERC5095(principalToken).redeem(principalAmount, address(this), owner);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               ERC165 LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return
             interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
             interfaceId == 0x80ac58cd || // ERC165 Interface ID for ERC721
@@ -154,7 +195,7 @@ abstract contract ERC721 {
                         INTERNAL MINT/BURN LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _mint(address to, uint256 id) internal virtual {
+    function _mint(address to, uint256 id) internal {
         require(to != address(0), "INVALID_RECIPIENT");
 
         require(_ownerOf[id] == address(0), "ALREADY_MINTED");
@@ -169,7 +210,7 @@ abstract contract ERC721 {
         emit Transfer(address(0), to, id);
     }
 
-    function _burn(uint256 id) internal virtual {
+    function _burn(uint256 id) internal {
         address owner = _ownerOf[id];
 
         require(owner != address(0), "NOT_MINTED");
@@ -190,7 +231,7 @@ abstract contract ERC721 {
                         INTERNAL SAFE MINT LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _safeMint(address to, uint256 id) internal virtual {
+    function _safeMint(address to, uint256 id) internal {
         _mint(to, id);
 
         if (to.code.length != 0)
@@ -205,7 +246,7 @@ abstract contract ERC721 {
         address to,
         uint256 id,
         bytes memory data
-    ) internal virtual {
+    ) internal {
         _mint(to, id);
 
         if (to.code.length != 0)
