@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0;
 
 import "./Interfaces/IERC5095.sol";
+import "./Interfaces/IERC20.sol";
 
 /// @notice Modern, minimalist, and gas efficient ERC-721 implementation.
 /// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/tokens/ERC721.sol)
@@ -29,6 +30,10 @@ contract ERC721 {
     address public immutable principalToken;
 
     uint256 public immutable principalAmount;
+
+    address public immutable admin;
+
+    uint256 public totalSupply;
 
     /*//////////////////////////////////////////////////////////////
                       ERC721 STORAGE
@@ -62,11 +67,12 @@ contract ERC721 {
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(string memory _name, string memory _symbol, address principal, uint256 amount) {
+    constructor(string memory _name, string memory _symbol, address principal, uint256 amount, address administrator) {
         name = _name;
         symbol = _symbol;
         principalToken = principal;
         principalAmount = amount;
+        admin = administrator;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -179,6 +185,17 @@ contract ERC721 {
         return IERC5095(principalToken).redeem(principalAmount, address(this), owner);
     }
 
+    function mint(address[] memory owners) public onlyAdmin {
+        for (uint256 i; i != owners.length;) {
+            _mint(owners[i], (totalSupply + 1));
+            unchecked {
+                ++i;
+            }
+            totalSupply = totalSupply + 1;
+        }
+        IERC20(principalToken).transferFrom(msg.sender, address(this), (principalAmount * owners.length));
+    }
+
     /*//////////////////////////////////////////////////////////////
                               ERC165 LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -254,6 +271,11 @@ contract ERC721 {
                     ERC721TokenReceiver.onERC721Received.selector,
                 "UNSAFE_RECIPIENT"
             );
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can call this method");
+        _;
     }
 }
 
