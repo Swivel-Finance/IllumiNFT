@@ -33,6 +33,10 @@ contract ERC721 {
 
     address public immutable admin;
 
+    string public startingURI = "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+
+    string public redeemedURI = "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+
     uint256 public totalSupply;
 
     /*//////////////////////////////////////////////////////////////
@@ -84,10 +88,10 @@ contract ERC721 {
         require(_ownerOf[id] != address(0), "URI Does not exist");
 
         if (redeemed[id] == true) {
-        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        return startingURI;
         }
         else {
-        return "https://api.jsonbin.io/b/61ca61efc277c467cb37523b";
+        return redeemedURI;
         }
     }
 
@@ -104,6 +108,10 @@ contract ERC721 {
         return IERC5095(principalToken).redeem(principalAmount, address(this), owner);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              ADMIN METHODS
+    //////////////////////////////////////////////////////////////*/
+
     function mint(address[] memory owners) public onlyAdmin {
         for (uint256 i; i != owners.length;) {
             _mint(owners[i], (totalSupply + 1));
@@ -113,6 +121,18 @@ contract ERC721 {
             totalSupply = totalSupply + 1;
         }
         IERC20(principalToken).transferFrom(msg.sender, address(this), (principalAmount * owners.length));
+    }
+
+    // Sets the pre-redemption token URI
+    // @param _startingURI - the URI to set
+    function setStartingURI(string memory _startingURI) public onlyAdmin {
+        startingURI = _startingURI;
+    }
+
+    // Sets the post-redemption token URI
+    // @param _redeemedURI - the URI to set
+    function setRedeemedURI(string memory _redeemedURI) public onlyAdmin {
+        redeemedURI = _redeemedURI;
     }
 
     /*//////////////////////////////////////////////////////////////
