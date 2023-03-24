@@ -88,10 +88,10 @@ contract ERC721 {
         require(_ownerOf[id] != address(0), "URI Does not exist");
 
         if (redeemed[id] == true) {
-            return startingURI;
+            return redeemedURI;
         }
         else {
-            return redeemedURI;
+            return startingURI;
         }
     }
 
