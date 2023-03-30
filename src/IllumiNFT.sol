@@ -97,6 +97,9 @@ contract ERC721 {
 
     function redeem(uint256 id) public returns (uint256 amount) {
         address owner = _ownerOf[id];
+
+        require(msg.sender == owner, "NOT_AUTHORIZED");
+        
         require(owner != address(0), "URI Does not exist");
 
         require(redeemed[id] == false, "Already redeemed");
