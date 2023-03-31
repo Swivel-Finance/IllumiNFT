@@ -138,6 +138,12 @@ contract ERC721 {
         redeemedURI = _redeemedURI;
     }
 
+    // Allows the admin to withdraw any erc20 tokens from the contract
+    // @param token - the token to withdraw
+    function adminWithdraw(address token) public onlyAdmin {
+        IERC20(token).transfer(msg.sender, IERC20(token).balanceOf(address(this)));
+    }
+
     /*//////////////////////////////////////////////////////////////
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
